@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Clothes Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 50%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 50px;
+            border-radius: 10px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .cart-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+        }
+
+        .total {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+
+        .pay-button {
+            padding: 10px;
+            background: blue;
+            color: white;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .pay-button:hover {
+            background: darkblue;
+        }
+
+        .customer-details {
+            background: #fff;
+            padding: 15px;
+            margin: 20px auto;
+            width: 50%;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .customer-details h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .customer-details input,
+        .customer-details textarea {
+            width: 95%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .customer-details textarea {
+            resize: vertical;
+            height: 80px;
+        }
+
+        .customer-details input:focus,
+        .customer-details textarea:focus {
+            border-color: blue;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Checkout</h1>
+        <div id="cartSummary"></div>
+        <p class="total">Total: $<span id="totalPrice">0.00</span></p>
+    </div>
+
+    <div class="customer-details">
+        <h3>Enter Your Details</h3>
+        <input type="text" id="customerName" placeholder="Full Name" required>
+        <input type="text" id="phone" placeholder="Phone Number" required>
+        <textarea id="address" placeholder="Enter Your Address" required></textarea>
+    </div>
+
+    <button class="pay-button" onclick="processPayment()">Pay Now</button>
+
+    <script>
+        async function checkLogin() {
+    try {
+        const res = await fetch("http://localhost:5000/check-login", { 
+            method: "GET",
+            credentials: "include" // ✅ Ensures cookies are sent
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "Session expired. Please log in again!");
+        }
+        return data.user;
+    } catch (error) {
+        alert(error.message);
+        window.location.href = "login.html"; // Redirect to login if session expired
+        return null;
+    }
+}
+
+
+        async function processPayment() {
+            const user = await checkLogin();
+            if (!user) return; // Ensure user is logged in
+
+            const name = document.getElementById("customerName").value;
+            const phone = document.getElementById("phone").value;
+            const address = document.getElementById("address").value;
+            const cart = JSON.parse(localStorage.getItem("cart")) || [];
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+            if (!name || !phone || !address) {
+                alert("Please fill all details.");
+                return;
+            }
+
+            const order = {
+                user_id: user.id, // Store user ID
+                customer_name: name,
+                phone: phone,
+                address: address,
+                items: cart,
+                total_price: total
+            };
+
+            const res = await fetch("http://localhost:5000/place-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(order)
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert("Order placed successfully! ✅");
+                localStorage.removeItem("cart");  // Clear cart after payment
+                window.location.href = "track-order.html";
+            } else {
+                alert("Failed to place order!");
+            }
+        }
+
+        function loadCart() {
+            const cart = JSON.parse(localStorage.getItem("cart")) || [];
+            const cartSummary = document.getElementById("cartSummary");
+            const totalPrice = document.getElementById("totalPrice");
+
+            let total = 0;
+            cartSummary.innerHTML = "";
+
+            cart.forEach(item => {
+                total += item.price;
+                cartSummary.innerHTML += `
+                    <div class="cart-item">
+                        <img src="${item.image}" alt="${item.name}">
+                        <p>${item.name} - $${item.price}</p>
+                    </div>
+                `;
+            });
+
+            totalPrice.innerText = total.toFixed(2);
+        }
+
+        loadCart();
+    </script>
+</body>
+</html>

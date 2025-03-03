@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Clothes Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        /* 🔹 Navigation Bar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            color: white;
+            padding: 15px;
+        }
+
+        .cart-icon {
+            cursor: pointer;
+            font-size: 20px;
+            position: relative;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background-color: red;
+            color: white;
+            font-size: 12px;
+            border-radius: 50%;
+            padding: 4px 8px;
+        }
+
+        /* 🔹 Cart Dropdown */
+        .cart-dropdown {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            width: 250px;
+            z-index: 1000;
+        }
+
+        .cart-dropdown.active {
+            display: block;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .cart-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+        }
+
+        .cart-item button {
+            background: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        h1 {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            margin: 0;
+        }
+
+        h2 {
+            margin-top: 20px;
+            color: #444;
+        }
+
+        #categoriesContainer {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .category-item {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .category-item img {
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .category-item img:hover {
+            transform: scale(1.1);
+        }
+
+        #clothingItems {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .clothing-item {
+            border: 1px solid #ccc;
+            background-color: white;
+            padding: 15px;
+            width: 250px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .clothing-item img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 10px;
+            margin-top: 10px;
+            background-color: blue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: darkblue;
+        }
+        #checkoutButton {
+    width: 100%;
+    padding: 10px;
+    background: green;
+    color: white;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#checkoutButton:hover {
+    background: darkgreen;
+}
+
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>Clothes Store</h1>
+        <a href="track-order.html" class="track-link">Track Order</a>
+        <div class="cart-icon" onclick="toggleCart()">
+            🛒 <span class="cart-count" id="cartCount">0</span>
+        </div>
+    </div>
+
+    <div class="cart-dropdown" id="cartDropdown">
+        <div id="cartItems"></div>
+        <button id="checkoutButton" onclick="goToPayment()">Checkout</button>
+    </div>
+
+    <h2>Select a Clothing Category:</h2>
+    <div id="categoriesContainer"></div>
+
+    <h2>Available Designs:</h2>
+    <div id="clothingItems"></div>
+
+    <script>
+        const API_URL = "http://localhost:5000";
+
+        let cart = [];
+
+        // 🔹 Load Categories as Images
+        async function loadCategories() {
+            const res = await fetch(`${API_URL}/categories`);
+            const categories = await res.json();
+
+            const categoriesContainer = document.getElementById("categoriesContainer");
+            categoriesContainer.innerHTML = "";
+
+            categories.forEach(category => {
+                const categoryDiv = document.createElement("div");
+                categoryDiv.classList.add("category-item");
+                categoryDiv.innerHTML = `
+                    <img src="${API_URL}${category.image}" alt="${category.name}" onclick="loadClothes('${category.name}')">
+                    <h3>${category.name}</h3>
+                `;
+                categoriesContainer.appendChild(categoryDiv);
+            });
+        }
+
+        // 🔹 Load Clothes for Selected Category
+        async function loadClothes(category) {
+            const res = await fetch(`${API_URL}/clothes/${category}`);
+            const clothes = await res.json();
+
+            const clothingItemsDiv = document.getElementById("clothingItems");
+            clothingItemsDiv.innerHTML = "";
+
+            clothes.forEach(item => {
+                const itemDiv = document.createElement("div");
+                itemDiv.classList.add("clothing-item");
+                itemDiv.innerHTML = `
+                    <img src="${API_URL}${item.design}" alt="${item.name}" width="200">
+                    <h3>${item.name}</h3>
+                    <p>Price: $${item.price}</p>
+                    <button onclick="addToCart(${item.id}, '${item.name}', '${API_URL}${item.design}', ${item.price})">Add to Cart</button>
+                `;
+                clothingItemsDiv.appendChild(itemDiv);
+            });
+        }
+
+        // 🔹 Add Item to Cart
+        function addToCart(id, name, image, price) {
+            cart.push({ id, name, image, price });
+            updateCart();
+        }
+
+        // 🔹 Update Cart UI
+        function updateCart() {
+            const cartDropdown = document.getElementById("cartDropdown");
+            const cartCount = document.getElementById("cartCount");
+            
+            cartDropdown.innerHTML = "";
+
+            if (cart.length === 0) {
+                cartDropdown.innerHTML = "<p>Cart is empty.</p>";
+            } else {
+                cart.forEach((item, index) => {
+                    const cartItem = document.createElement("div");
+                    cartItem.classList.add("cart-item");
+                    cartItem.innerHTML = `
+                        <img src="${item.image}" alt="${item.name}">
+                        <p>${item.name} - $${item.price}</p>
+                        <button onclick="removeFromCart(${index})">❌</button>
+                    `;
+                    cartDropdown.appendChild(cartItem);
+                });
+            }
+
+            cartCount.textContent = cart.length;
+        }
+
+        // 🔹 Remove Item from Cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCart();
+        }
+
+        // 🔹 Toggle Cart Visibility
+        function toggleCart() {
+            document.getElementById("cartDropdown").classList.toggle("active");
+        }
+
+        // ✅ Load categories on page load
+        loadCategories();
+        function updateCart() {
+    const cartDropdown = document.getElementById("cartDropdown");
+    const cartItemsDiv = document.getElementById("cartItems");
+    const cartCount = document.getElementById("cartCount");
+    const checkoutButton = document.getElementById("checkoutButton");
+
+    cartItemsDiv.innerHTML = "";
+
+    if (cart.length === 0) {
+        cartItemsDiv.innerHTML = "<p>Cart is empty.</p>";
+        checkoutButton.style.display = "none"; // Hide checkout button
+    } else {
+        cart.forEach((item, index) => {
+            const cartItem = document.createElement("div");
+            cartItem.classList.add("cart-item");
+            cartItem.innerHTML = `
+                <img src="${item.image}" alt="${item.name}">
+                <p>${item.name} - $${item.price}</p>
+                <button onclick="removeFromCart(${index})">❌</button>
+            `;
+            cartItemsDiv.appendChild(cartItem);
+        });
+        checkoutButton.style.display = "block"; // Show checkout button
+    }
+
+    cartCount.textContent = cart.length;
+}
+
+// 🔹 Go to Payment Page
+function goToPayment() {
+    localStorage.setItem("cart", JSON.stringify(cart)); // Save cart data
+    window.location.href = "payment.html"; // Redirect to payment page
+}
+
+    </script>
+</body>
+</html>
